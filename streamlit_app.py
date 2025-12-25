@@ -95,12 +95,63 @@ if not can_generate:
 if st.session_state.assignments:
     st.subheader("Assignments (admin view)")
 
-    rows = [
-        {"Giver": giver, "Recipient": recipient}
-        for giver, recipient in sorted(st.session_state.assignments.items(), key=lambda kv: kv[0].casefold())
-    ]
+    def _cycles(mapping: dict[str, str]) -> list[list[str]]:
+        unseen = set(mapping.keys())
+        cycles: list[list[str]] = []
+        while unseen:
+            start = next(iter(unseen))
+            cycle: list[str] = []
+            cur = start
+            while cur in unseen:
+                unseen.remove(cur)
+                cycle.append(cur)
+                cur = mapping[cur]
+            cycles.append(cycle)
+        return cycles
+
+    cycles = _cycles(st.session_state.assignments)
+    cycles.sort(key=lambda c: (-len(c), min(n.casefold() for n in c)))
+
+    def _cycle_ring(cycle: list[str], mapping: dict[str, str], max_nodes: int = 15) -> str | None:
+        if len(cycle) > max_nodes:
+            return None
+
+        start = min(cycle, key=lambda n: n.casefold())
+        order = [start]
+        cur = start
+        while True:
+            cur = mapping[cur]
+            order.append(cur)
+            if cur == start:
+                break
+        return " → ".join(order)
+
+    rows: list[dict[str, str]] = []
+    copy_lines: list[str] = []
+    for i, cycle in enumerate(cycles, start=1):
+        cycle_pairs = sorted(
+            ((giver, st.session_state.assignments[giver]) for giver in cycle),
+            key=lambda kv: kv[0].casefold(),
+        )
+
+        header = f"— Cycle {i} (length {len(cycle)}) —"
+        if i > 1:
+            rows.append({"Giver": "", "Recipient": ""})
+            copy_lines.append("")
+
+        rows.append({"Giver": header, "Recipient": ""})
+        copy_lines.append(header)
+
+        ring = _cycle_ring(cycle, st.session_state.assignments)
+        if ring:
+            rows.append({"Giver": ring, "Recipient": ""})
+            copy_lines.append(ring)
+
+        for giver, recipient in cycle_pairs:
+            rows.append({"Giver": giver, "Recipient": recipient})
+            copy_lines.append(f"{giver} -> {recipient}")
+
     st.table(rows)
 
     st.caption("Copy/paste friendly")
-    text = "\n".join(f"{row['Giver']} -> {row['Recipient']}" for row in rows)
-    st.code(text, language="text")
+    st.code("\n".join(copy_lines), language="text")
