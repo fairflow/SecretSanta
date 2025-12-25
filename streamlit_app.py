@@ -6,6 +6,8 @@ __version__ = "0.1.0"
 
 st.set_page_config(page_title="Secret Santa (Derangement)", page_icon="🎁", layout="centered")
 
+st.sidebar.markdown(f"**Version:** {__version__}")
+
 st.title("Secret Santa (Derangement)")
 st.caption("Add names one-by-one, then generate a no-self-assignment mapping.")
 
@@ -48,46 +50,28 @@ with col3:
 
 
 if st.session_state.names:
-    st.subheader("Current list")
-    st.write("\n".join(f"{i+1}. {n}" for i, n in enumerate(st.session_state.names)))
+    with st.expander("Participants (edit)", expanded=True):
+        st.caption("Tip: after editing a cell, press Enter to apply it.")
 
-    st.subheader("Edit a name")
-    st.caption("Fix typos and click ‘Apply edit’. Assignments will be cleared.")
+        current_names = st.session_state.names
+        edited_rows = st.data_editor(
+            [{"Name": n} for n in current_names],
+            key="participants_editor",
+            hide_index=True,
+            use_container_width=True,
+        )
 
-    if "edit_index" not in st.session_state or st.session_state.edit_index >= len(st.session_state.names):
-        st.session_state.edit_index = 0
-    if "edit_value" not in st.session_state:
-        st.session_state.edit_value = st.session_state.names[st.session_state.edit_index]
-
-    def _sync_edit_value():
-        idx = st.session_state.edit_index
-        if 0 <= idx < len(st.session_state.names):
-            st.session_state.edit_value = st.session_state.names[idx]
-
-    names = st.session_state.names
-    st.selectbox(
-        "Choose name",
-        options=list(range(len(names))),
-        format_func=lambda i: names[i],
-        key="edit_index",
-        on_change=_sync_edit_value,
-    )
-    st.text_input("Corrected name", key="edit_value")
-
-    if st.button("Apply edit"):
-        idx = st.session_state.edit_index
-        new_name = st.session_state.edit_value.strip()
-        if not new_name:
-            st.error("Name cannot be blank.")
-        else:
-            existing_lower = {n.casefold() for j, n in enumerate(names) if j != idx}
-            if new_name.casefold() in existing_lower:
-                st.error("Names must be unique (case-insensitive).")
+        edited_names = [str(row.get("Name", "")).strip() for row in edited_rows]
+        if edited_names != current_names:
+            if any(not n for n in edited_names):
+                st.error("Names cannot be blank.")
             else:
-                st.session_state.names[idx] = new_name
-                st.session_state.assignments = None
-                st.success("Updated name.")
-                _sync_edit_value()
+                lowered = [n.casefold() for n in edited_names]
+                if len(set(lowered)) != len(lowered):
+                    st.error("Names must be unique (case-insensitive).")
+                else:
+                    st.session_state.names = edited_names
+                    st.session_state.assignments = None
 
 
 st.divider()

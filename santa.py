@@ -1,4 +1,4 @@
-import random
+from derangement import pool_derangement
 
 def secret_santa_imperative(n, seed=None):
     """
@@ -14,27 +14,7 @@ def secret_santa_imperative(n, seed=None):
     if n < 2:
         raise ValueError("n must be greater than 1")
 
-    # Generate a proper Secret Santa assignment:
-    # - Everyone gives exactly one gift
-    # - Everyone receives exactly one gift
-    # - Nobody gives to themselves
-    # We do this by generating a random derangement: a random permutation of
-    # participants where no one is assigned to themselves.
-    rng = random.Random(seed)
-
-    participants = list(range(1, n + 1))
-    recipients = participants[:]
-
-    # Rejection-sample shuffles until there are no fixed points.
-    # Expected number of shuffles is ~e (~2.7), so this is fast for typical n.
-    while True:
-        rng.shuffle(recipients)
-        if all(giver != recipient for giver, recipient in zip(participants, recipients)):
-            break
-
-    assignments = dict(zip(participants, recipients))
-
-    return assignments
+    return pool_derangement(n, seed=seed)
 
 
 # Example usage
