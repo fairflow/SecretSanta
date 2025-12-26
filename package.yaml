@@ -1,0 +1,11 @@
+name: SecretSanta
+version: 0.1.0.0
+
+dependencies:
+- base >= 4.7 && < 5
+- random >= 1.2
+
+library:
+  source-dirs: .
+  exposed-modules:
+  - SecretSanta

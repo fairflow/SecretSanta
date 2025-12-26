@@ -1,0 +1,8 @@
+resolver: lts-22.7
+
+packages:
+- .
+
+dependencies:
+- base >= 4.7 && < 5
+- random >= 1.2
